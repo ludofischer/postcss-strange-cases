@@ -1,0 +1,21 @@
+{
+  "name": "postcss-strange-cases",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "author": "",
+  "license": "GPLv3",
+  "peerDependencies": {
+    "postcss": "^8.1.4"
+  },
+  "devDependencies": {
+    "prettier": "^2.2.0",
+    "uvu": "^0.4.1"
+  },
+  "dependencies": {
+    "postcss": "^8.1.10"
+  }
+}
