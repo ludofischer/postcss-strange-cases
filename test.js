@@ -25,26 +25,29 @@ test('shall convert color and border', () => {
     });
 });
 
-test('shall convert color and border', () => {
-  return postcss([colorToBorder,     {
+test('shall not convert color and border with separate traversal', () => {
+  return postcss([
+    colorToBorder,
+    {
       postcssPlugin: 'separate-traversal',
       async Root(root) {
-        await postcss([black]).process(root);
+        await postcss([black]).process(root, { from: undefined });
       },
-    }])
+    },
+  ])
     .process(css, { from: undefined })
     .then((result) => {
-      assert.strictEqual(result.css, expected);
+      assert.notStrictEqual(result.css, expected);
     });
 });
 
-test('shall convert color and border', () => {
+test('shall convert color and border with separate traversal on exit', () => {
   return postcss([
     colorToBorder,
     {
       postcssPlugin: 'separate-traversal',
       async RootExit(root) {
-        await postcss([black]).process(root);
+        await postcss([black]).process(root, { from: undefined });
       },
     },
   ])
@@ -54,4 +57,11 @@ test('shall convert color and border', () => {
     });
 });
 
+test('shall convert color and border with separate processor', () => {
+  return postcss([colorToBorder, postcss([black])])
+    .process(css, { from: undefined })
+    .then((result) => {
+      assert.strictEqual(result.css, expected);
+    });
+});
 test.run();
