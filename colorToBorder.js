@@ -5,7 +5,6 @@ module.exports = () => {
   return {
     postcssPlugin: 'colorToBorder',
     Declaration(decl) {
-      console.log('In border plugin', decl.toString());
       decl.prop = 'border-color';
     },
   };
