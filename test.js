@@ -3,7 +3,7 @@ const assert = require('assert').strict;
 const fs = require('fs');
 const postcss = require('postcss');
 const red = require('./redplugin.js');
-const colorToBorder = require('./colorToBorder.js');
+const { colorToBorder, colorToBorderOnce } = require('./colorToBorder.js');
 const black = require('./blackplugin.js');
 const blackInSeparate = require('./separateRoot.js');
 
@@ -32,6 +32,70 @@ test('shall not convert color and border with separate traversal', () => {
       postcssPlugin: 'separate-traversal',
       async Root(root, helper) {
         await helper.postcss([black]).process(root, { from: undefined });
+      },
+    },
+  ])
+    .process(css, { from: undefined })
+    .then((result) => {
+      assert.notStrictEqual(result.css, expected);
+    });
+});
+
+test('shall convert color and border with OnceExit and separate traversal', () => {
+  return postcss([
+    colorToBorderOnce,
+    {
+      postcssPlugin: 'separate-traversal',
+      async Root(root, helper) {
+        await helper.postcss([black]).process(root, { from: undefined });
+      },
+    },
+  ])
+    .process(css, { from: undefined })
+    .then((result) => {
+      assert.notStrictEqual(result.css, expected);
+    });
+});
+
+test('shall convert color and border with OnceExit and separate traversal', () => {
+  return postcss([
+    colorToBorderOnce,
+    {
+      postcssPlugin: 'separate-traversal',
+      async OnceExit(root, helper) {
+        await helper.postcss([black]).process(root, { from: undefined });
+      },
+    },
+  ])
+    .process(css, { from: undefined })
+    .then((result) => {
+      assert.notStrictEqual(result.css, expected);
+    });
+});
+
+test('shall convert color and border with OnceExit and separate traversal', () => {
+  return postcss([
+    {
+      postcssPlugin: 'separate-traversal',
+      async OnceExit(root, helper) {
+        await helper.postcss([black]).process(root, { from: undefined });
+      },
+    },
+    colorToBorderOnce,
+  ])
+    .process(css, { from: undefined })
+    .then((result) => {
+      assert.notStrictEqual(result.css, expected);
+    });
+});
+
+test('shall not convert color and border with separate traversal', () => {
+  return postcss([
+    colorToBorder,
+    {
+      postcssPlugin: 'separate-traversal',
+      async Once(root) {
+        await postcss([black]).process(root, { from: undefined });
       },
     },
   ])
