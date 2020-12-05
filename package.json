@@ -13,9 +13,9 @@
   },
   "devDependencies": {
     "prettier": "^2.2.1",
-    "uvu": "^0.5.0"
+    "uvu": "^0.5.1"
   },
   "dependencies": {
-    "postcss": "^8.1.10"
+    "postcss": "^8.1.14"
   }
 }
