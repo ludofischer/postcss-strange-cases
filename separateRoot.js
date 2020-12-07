@@ -1,4 +1,3 @@
-const redPlugin = require('./redplugin.js');
 const blackPlugin = require('./blackplugin.js');
 const postcss = require('postcss');
 
