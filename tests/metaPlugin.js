@@ -42,7 +42,9 @@ metaWithRoot(
       {
         postcssPlugin: 'meta-plugin',
         async Root(root, helper) {
-          await helper.postcss([blackPlugin]).process(root, { from: undefined });
+          await helper
+            .postcss([blackPlugin])
+            .process(root, { from: undefined });
         },
       },
     ])
@@ -68,7 +70,9 @@ metaWithRoot(
       {
         postcssPlugin: 'meta-plugin',
         async Root(root, helper) {
-          await helper.postcss([blackPlugin]).process(root, { from: undefined });
+          await helper
+            .postcss([blackPlugin])
+            .process(root, { from: undefined });
         },
       },
     ])
@@ -196,7 +200,9 @@ metaWithOnceExit(
       {
         postcssPlugin: 'meta-plugin',
         async OnceExit(root, helper) {
-          await helper.postcss([blackPlugin]).process(root, { from: undefined });
+          await helper
+            .postcss([blackPlugin])
+            .process(root, { from: undefined });
         },
       },
     ])
@@ -214,7 +220,9 @@ metaWithOnceExit(
       {
         postcssPlugin: 'meta-plugin',
         async OnceExit(root, helper) {
-          await helper.postcss([blackPlugin]).process(root, { from: undefined });
+          await helper
+            .postcss([blackPlugin])
+            .process(root, { from: undefined });
         },
       },
       {
@@ -240,7 +248,9 @@ metaWithOnceExit(
       {
         postcssPlugin: 'meta-plugin',
         async OnceExit(root, helper) {
-          await helper.postcss([blackPlugin]).process(root, { from: undefined });
+          await helper
+            .postcss([blackPlugin])
+            .process(root, { from: undefined });
         },
       },
       {
@@ -249,6 +259,39 @@ metaWithOnceExit(
           css.walkDecls((decl) => {
             decl.prop = 'border-color';
           });
+        },
+      },
+    ])
+      .process(css, { from: undefined })
+      .then((result) => {
+        assert.strictEqual(result.css, expected);
+      });
+  }
+);
+
+metaWithOnceExit(
+  'when the other plugin is also a meta-plugin, then both plugins run',
+  () => {
+    return postcss([
+      {
+        postcssPlugin: 'meta-plugin',
+        async OnceExit(root, helper) {
+          await helper
+            .postcss([blackPlugin])
+            .process(root, { from: undefined });
+        },
+      },
+      {
+        postcssPlugin: 'other-meta-plugin',
+        async OnceExit(css) {
+          await postcss([
+            {
+              postcssPlugin: 'colorToBorder',
+              Declaration(decl) {
+                decl.prop = 'border-color';
+              },
+            },
+          ]).process(css, { from: undefined });
         },
       },
     ])
