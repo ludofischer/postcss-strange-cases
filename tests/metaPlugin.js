@@ -1,11 +1,6 @@
-const { test } = require('uvu');
+const { suite } = require('uvu');
 const assert = require('assert').strict;
-const fs = require('fs');
 const postcss = require('postcss');
-const red = require('./redplugin.js');
-const { colorToBorder, colorToBorderOnce } = require('./colorToBorder.js');
-const black = require('./blackplugin.js');
-const blackInSeparate = require('./separateRoot.js');
 
 const css = `
 p {
@@ -17,117 +12,138 @@ p {
   border-color: black;
 }`;
 
-test('shall convert color and border', () => {
-  return postcss([colorToBorder, black])
+const metaOnlyOutput = `
+p {
+  color: black;
+}`;
+
+function blackPlugin() {
+  return {
+    postcssPlugin: 'black',
+    Declaration(decl) {
+      decl.value = 'black';
+    },
+  };
+}
+blackPlugin.postcss = true;
+
+const metaWithRoot = suite('given the meta-plugin uses Root');
+
+metaWithRoot(
+  'when the other plugins use a visitor, then only the meta-plugin runs',
+  () => {
+    return postcss([
+      {
+        postcssPlugin: 'colorToBorder',
+        Declaration(decl) {
+          decl.prop = 'border-color';
+        },
+      },
+      {
+        postcssPlugin: 'meta-plugin',
+        async Root(root, helper) {
+          await helper.postcss([blackPlugin]).process(root, { from: undefined });
+        },
+      },
+    ])
+      .process(css, { from: undefined })
+      .then((result) => {
+        assert.strictEqual(result.css, metaOnlyOutput);
+      });
+  }
+);
+
+metaWithRoot(
+  'when the other plugin uses OnceExit, then both plugins run',
+  () => {
+    return postcss([
+      {
+        postcssPlugin: 'colorToBorderOnce',
+        OnceExit(css) {
+          css.walkDecls((decl) => {
+            decl.prop = 'border-color';
+          });
+        },
+      },
+      {
+        postcssPlugin: 'meta-plugin',
+        async Root(root, helper) {
+          await helper.postcss([blackPlugin]).process(root, { from: undefined });
+        },
+      },
+    ])
+      .process(css, { from: undefined })
+      .then((result) => {
+        assert.strictEqual(result.css, expected);
+      });
+  }
+);
+
+metaWithRoot('when the other plugin uses Once, then both plugins run', () => {
+  return postcss([
+    {
+      postcssPlugin: 'colorToBorderOnce',
+      Once(css) {
+        css.walkDecls((decl) => {
+          decl.prop = 'border-color';
+        });
+      },
+    },
+    {
+      postcssPlugin: 'meta-plugin',
+      async Root(root, helper) {
+        await helper.postcss([blackPlugin]).process(root, { from: undefined });
+      },
+    },
+  ])
     .process(css, { from: undefined })
     .then((result) => {
       assert.strictEqual(result.css, expected);
     });
 });
 
-test('shall not convert color and border with separate traversal', () => {
+metaWithRoot.run();
+
+const metaWithOnce = suite('given the meta-plugin uses Once');
+
+metaWithOnce(
+  'when the other plugin uses a visitor, then only the meta-plugin runs',
+  () => {
+    return postcss([
+      {
+        postcssPlugin: 'colorToBorder',
+        Declaration(decl) {
+          decl.prop = 'border-color';
+        },
+      },
+      {
+        postcssPlugin: 'meta-plugin',
+        async Once(root) {
+          await postcss([blackPlugin]).process(root, { from: undefined });
+        },
+      },
+    ])
+      .process(css, { from: undefined })
+      .then((result) => {
+        assert.strictEqual(result.css, metaOnlyOutput);
+      });
+  }
+);
+
+metaWithOnce('when the other plugin uses Once, then both plugins run', () => {
   return postcss([
-    colorToBorder,
     {
-      postcssPlugin: 'separate-traversal',
-      async Root(root, helper) {
-        await helper.postcss([black]).process(root, { from: undefined });
+      postcssPlugin: 'colorToBorderOnce',
+      Once(css) {
+        css.walkDecls((decl) => {
+          decl.prop = 'border-color';
+        });
       },
     },
-  ])
-    .process(css, { from: undefined })
-    .then((result) => {
-      assert.notStrictEqual(result.css, expected);
-    });
-});
-
-test('shall convert color and border with OnceExit and separate traversal', () => {
-  return postcss([
-    colorToBorderOnce,
     {
-      postcssPlugin: 'separate-traversal',
-      async Root(root, helper) {
-        await helper.postcss([black]).process(root, { from: undefined });
-      },
-    },
-  ])
-    .process(css, { from: undefined })
-    .then((result) => {
-      assert.notStrictEqual(result.css, expected);
-    });
-});
-
-test('shall convert color and border with OnceExit and separate traversal', () => {
-  return postcss([
-    colorToBorderOnce,
-    {
-      postcssPlugin: 'separate-traversal',
-      async OnceExit(root, helper) {
-        await helper.postcss([black]).process(root, { from: undefined });
-      },
-    },
-  ])
-    .process(css, { from: undefined })
-    .then((result) => {
-      assert.notStrictEqual(result.css, expected);
-    });
-});
-
-test('shall convert color and border with OnceExit and separate traversal', () => {
-  return postcss([
-    {
-      postcssPlugin: 'separate-traversal',
-      async OnceExit(root, helper) {
-        await helper.postcss([black]).process(root, { from: undefined });
-      },
-    },
-    colorToBorderOnce,
-  ])
-    .process(css, { from: undefined })
-    .then((result) => {
-      assert.notStrictEqual(result.css, expected);
-    });
-});
-
-test('shall not convert color and border with separate traversal', () => {
-  return postcss([
-    colorToBorder,
-    {
-      postcssPlugin: 'separate-traversal',
+      postcssPlugin: 'meta-plugin',
       async Once(root) {
-        await postcss([black]).process(root, { from: undefined });
-      },
-    },
-  ])
-    .process(css, { from: undefined })
-    .then((result) => {
-      assert.notStrictEqual(result.css, expected);
-    });
-});
-
-test('shall not convert color and border with separate traversal', () => {
-  return postcss([
-    colorToBorder,
-    {
-      postcssPlugin: 'separate-traversal',
-      async Root(root) {
-        await postcss([black]).process(root, { from: undefined });
-      },
-    },
-  ])
-    .process(css, { from: undefined })
-    .then((result) => {
-      assert.notStrictEqual(result.css, expected);
-    });
-});
-
-test('shall convert color and border with separate traversal on exit', () => {
-  return postcss([
-    colorToBorder,
-    {
-      postcssPlugin: 'separate-traversal',
-      async RootExit(root) {
-        await postcss([black]).process(root, { from: undefined });
+        await postcss([blackPlugin]).process(root, { from: undefined });
       },
     },
   ])
@@ -137,11 +153,210 @@ test('shall convert color and border with separate traversal on exit', () => {
     });
 });
 
-test('shall convert color and border with separate processor', () => {
-  return postcss([colorToBorder, postcss([black])])
-    .process(css, { from: undefined })
-    .then((result) => {
-      assert.strictEqual(result.css, expected);
-    });
-});
-test.run();
+metaWithOnce(
+  'when the other plugin uses OnceExit, then both plugins run',
+  () => {
+    return postcss([
+      {
+        postcssPlugin: 'colorToBorderOnce',
+        OnceExit(css) {
+          css.walkDecls((decl) => {
+            decl.prop = 'border-color';
+          });
+        },
+      },
+      {
+        postcssPlugin: 'meta-plugin',
+        async Once(root) {
+          await postcss([blackPlugin]).process(root, { from: undefined });
+        },
+      },
+    ])
+      .process(css, { from: undefined })
+      .then((result) => {
+        assert.strictEqual(result.css, expected);
+      });
+  }
+);
+
+metaWithOnce.run();
+
+const metaWithOnceExit = suite('given the meta-plugin uses OnceExit');
+
+metaWithOnceExit(
+  'when the other plugin uses a a visitor, then both plugins run',
+  () => {
+    return postcss([
+      {
+        postcssPlugin: 'colorToBorder',
+        Declaration(decl) {
+          decl.prop = 'border-color';
+        },
+      },
+      {
+        postcssPlugin: 'meta-plugin',
+        async OnceExit(root, helper) {
+          await helper.postcss([blackPlugin]).process(root, { from: undefined });
+        },
+      },
+    ])
+      .process(css, { from: undefined })
+      .then((result) => {
+        assert.strictEqual(result.css, expected);
+      });
+  }
+);
+
+metaWithOnceExit(
+  'when the other plugin uses Once, then both plugins also run',
+  () => {
+    return postcss([
+      {
+        postcssPlugin: 'meta-plugin',
+        async OnceExit(root, helper) {
+          await helper.postcss([blackPlugin]).process(root, { from: undefined });
+        },
+      },
+      {
+        postcssPlugin: 'colorToBorderOnce',
+        Once(css) {
+          css.walkDecls((decl) => {
+            decl.prop = 'border-color';
+          });
+        },
+      },
+    ])
+      .process(css, { from: undefined })
+      .then((result) => {
+        assert.strictEqual(result.css, expected);
+      });
+  }
+);
+
+metaWithOnceExit(
+  'when the other plugin uses OnceExit, then both plugins run',
+  () => {
+    return postcss([
+      {
+        postcssPlugin: 'meta-plugin',
+        async OnceExit(root, helper) {
+          await helper.postcss([blackPlugin]).process(root, { from: undefined });
+        },
+      },
+      {
+        postcssPlugin: 'colorToBorderOnce',
+        OnceExit(css) {
+          css.walkDecls((decl) => {
+            decl.prop = 'border-color';
+          });
+        },
+      },
+    ])
+      .process(css, { from: undefined })
+      .then((result) => {
+        assert.strictEqual(result.css, expected);
+      });
+  }
+);
+
+metaWithOnceExit.run();
+
+const metaWithRootExit = suite('given the meta-plugin uses RootExit');
+
+metaWithRootExit(
+  'when the other plugin uses a visitor, then both plugins run',
+  () => {
+    return postcss([
+      {
+        postcssPlugin: 'colorToBorder',
+        Declaration(decl) {
+          decl.prop = 'border-color';
+        },
+      },
+      {
+        postcssPlugin: 'meta-plugin',
+        async RootExit(root) {
+          await postcss([blackPlugin]).process(root, { from: undefined });
+        },
+      },
+    ])
+      .process(css, { from: undefined })
+      .then((result) => {
+        assert.strictEqual(result.css, expected);
+      });
+  }
+);
+
+metaWithRootExit(
+  'when the other plugin uses RootExit, then only the meta-plugin runs',
+  () => {
+    return postcss([
+      {
+        postcssPlugin: 'colorToBorder',
+        RootExit(decl) {
+          decl.prop = 'border-color';
+        },
+      },
+      {
+        postcssPlugin: 'meta-plugin',
+        async RootExit(root) {
+          await postcss([blackPlugin]).process(root, { from: undefined });
+        },
+      },
+    ])
+      .process(css, { from: undefined })
+      .then((result) => {
+        assert.strictEqual(result.css, metaOnlyOutput);
+      });
+  }
+);
+
+metaWithRootExit(
+  'when the other plugin uses OnceExit, then only the meta-plugin runs',
+  () => {
+    return postcss([
+      {
+        postcssPlugin: 'colorToBorder',
+        OnceExit(decl) {
+          decl.prop = 'border-color';
+        },
+      },
+      {
+        postcssPlugin: 'meta-plugin',
+        async RootExit(root) {
+          await postcss([blackPlugin]).process(root, { from: undefined });
+        },
+      },
+    ])
+      .process(css, { from: undefined })
+      .then((result) => {
+        assert.strictEqual(result.css, metaOnlyOutput);
+      });
+  }
+);
+
+metaWithRootExit(
+  'when the other plugin uses Once, then only the meta-plugin runs',
+  () => {
+    return postcss([
+      {
+        postcssPlugin: 'colorToBorder',
+        Once(decl) {
+          decl.prop = 'border-color';
+        },
+      },
+      {
+        postcssPlugin: 'meta-plugin',
+        async RootExit(root) {
+          await postcss([blackPlugin]).process(root, { from: undefined });
+        },
+      },
+    ])
+      .process(css, { from: undefined })
+      .then((result) => {
+        assert.strictEqual(result.css, metaOnlyOutput);
+      });
+  }
+);
+
+metaWithRootExit.run();
