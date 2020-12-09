@@ -17,6 +17,6 @@
     "uvu": "^0.5.1"
   },
   "dependencies": {
-    "postcss": "^8.1.14"
+    "postcss": "^8.2.1"
   }
 }
