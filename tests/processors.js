@@ -34,7 +34,7 @@ colorToBorder.postcss = true;
 
 const givenProcessorPlugin = suite('given the plugin is a processor');
 givenProcessorPlugin(
-  'shall convert color and border with separate processor',
+  'shall apply the plugin together with others',
   () => {
     return postcss([colorToBorder, postcss([black])])
       .process(css, { from: undefined })
